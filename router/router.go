@@ -14,6 +14,7 @@ func NewRouter(esClient *services.ElasticsearchClient) *mux.Router {
 	r.HandleFunc("/index/settings", handlers.PostIndexSettings(esClient)).Methods("POST")
 	r.HandleFunc("/{index_name}/documents", handlers.PostDocuments(esClient)).Methods("POST")
 	r.HandleFunc("/{index_name}/attributes", handlers.GetIndexAttributesHandler(esClient)).Methods("GET")
+	r.HandleFunc("/{index_name}/change_mappings", handlers.ChangeMappings(esClient)).Methods("POST")
 
 	return r
 }

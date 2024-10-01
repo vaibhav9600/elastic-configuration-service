@@ -22,7 +22,9 @@ func PostDocuments(esClient *services.ElasticsearchClient) http.HandlerFunc {
 			return
 		}
 
-		err = esClient.IndexDocuments(indexName, documents)
+		ind := models.GetIndexInfo(models.IndexName{Index: indexName})
+		// we will do write on write aliases
+		err = esClient.IndexDocuments(ind.WriteAlias, documents)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

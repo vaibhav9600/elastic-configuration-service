@@ -97,6 +97,7 @@ func (es *ElasticsearchClient) UpdateIndexSettings(settings map[string]interface
 	return err
 }
 
+// TODO: retry on writes
 func (es *ElasticsearchClient) IndexDocuments(indexName string, documents []models.Document) error {
 	//TODO: remarks use bulk api here
 	for _, doc := range documents {
@@ -124,9 +125,10 @@ func (es *ElasticsearchClient) IndexDocuments(indexName string, documents []mode
 	return nil
 }
 
-func (es *ElasticsearchClient) GetIndexAttributes(indexName string) ([]string, error) {
+//tag:info https://stackoverflow.com/questions/41382627/do-you-need-to-delete-elasticsearch-aliases
+func (es *ElasticsearchClient) GetIndexAttributes(ind models.IndexInfo) ([]string, error) {
 	req := esapi.IndicesGetMappingRequest{
-		Index: []string{indexName},
+		Index: []string{ind.ReadAlias},
 	}
 
 	res, err := req.Do(context.Background(), es.client)
@@ -189,6 +191,7 @@ func extractProperties(properties map[string]interface{}, prefix string) []strin
 	return result
 }
 
+// TODO: add support for custom analyzers
 func (es *ElasticsearchClient) ChangeMappings(indexInfo models.IndexInfo, settings models.SetIndexSettings) error {
 	// Step 1: Get the current index from the read alias
 	getAliasReq := esapi.IndicesGetAliasRequest{
@@ -234,6 +237,8 @@ func (es *ElasticsearchClient) ChangeMappings(indexInfo models.IndexInfo, settin
 
 	properties := make(map[string]interface{})
 
+	// TODO: we can make read alias to point to both index while re-indexing is taking place
+	// and apply lock on any new indexing for this index till this gets completed
 	// Step 3: Update the mappings
 	for _, field := range settings.SearchableAttributes {
 		properties[field] = map[string]interface{}{
@@ -260,6 +265,7 @@ func (es *ElasticsearchClient) ChangeMappings(indexInfo models.IndexInfo, settin
 	}
 
 	// Step 4: Create a new index with the updated mappings
+	fmt.Println(marshalToJSONString(properties))
 	newIndexName := indexInfo.IndexName + "_new"
 	createIndexReq := esapi.IndicesCreateRequest{
 		Index: newIndexName,

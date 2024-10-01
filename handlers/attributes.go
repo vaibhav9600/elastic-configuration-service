@@ -1,7 +1,8 @@
 package handlers
 
 import (
-	"elastic-search-config-service/services" // Replace with your actual import path for Elasticsearch client
+	"elastic-search-config-service/models"
+	"elastic-search-config-service/services"
 	"encoding/json"
 	"net/http"
 
@@ -13,7 +14,8 @@ func GetIndexAttributesHandler(esClient *services.ElasticsearchClient) http.Hand
 		vars := mux.Vars(r)
 		indexName := vars["index_name"]
 
-		attributes, err := esClient.GetIndexAttributes(indexName)
+		ind := models.GetIndexInfo(models.IndexName{Index: indexName})
+		attributes, err := esClient.GetIndexAttributes(ind)
 		if err != nil {
 			http.Error(w, "Error fetching index attributes: "+err.Error(), http.StatusInternalServerError)
 			return
