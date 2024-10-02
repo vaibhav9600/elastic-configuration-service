@@ -192,7 +192,7 @@ func extractProperties(properties map[string]interface{}, prefix string) []strin
 }
 
 // TODO: add support for custom analyzers
-func (es *ElasticsearchClient) ChangeMappings(indexInfo models.IndexInfo, settings models.SetIndexSettings) error {
+func (es *ElasticsearchClient) ChangeMappings(indexInfo models.IndexInfo, settings models.IndexSettings) error {
 	// Step 1: Get the current index from the read alias
 	getAliasReq := esapi.IndicesGetAliasRequest{
 		Name: []string{indexInfo.ReadAlias},
@@ -235,45 +235,27 @@ func (es *ElasticsearchClient) ChangeMappings(indexInfo models.IndexInfo, settin
 		return err
 	}
 
-	properties := make(map[string]interface{})
+	fmt.Println(marshalToJSONString(mappingResponse))
 
-	// TODO: we can make read alias to point to both index while re-indexing is taking place
-	// and apply lock on any new indexing for this index till this gets completed
-	// Step 3: Update the mappings
-	for _, field := range settings.SearchableAttributes {
-		properties[field] = map[string]interface{}{
-			"type":  "text",
-			"index": true,
-		}
-	}
+	properties, _ := createDynamicMapping(currentIndex, mappingResponse, settings)
 
-	for _, field := range settings.FacetsAttributes {
-		dataType := determineDataType(field)
-		properties[field] = map[string]interface{}{
-			"type":  dataType,
-			"index": true,
-		}
-	}
-
-	for field := range mappingResponse[currentIndex].(map[string]interface{})["mappings"].(map[string]interface{})["properties"].(map[string]interface{}) {
-		if _, ok := properties[field]; !ok {
-			properties[field] = map[string]interface{}{
-				"type":  "object",
-				"index": false,
-			}
-		}
+	newMappings := map[string]interface{}{
+		"properties": properties["properties"].(map[string]interface{}),
 	}
 
 	// Step 4: Create a new index with the updated mappings
-	fmt.Println(marshalToJSONString(properties))
+	fmt.Println(marshalToJSONString(newMappings))
 	newIndexName := indexInfo.IndexName + "_new"
+	var buf bytes.Buffer
+	query := map[string]interface{}{
+		"mappings": newMappings,
+	}
+	if err := json.NewEncoder(&buf).Encode(query); err != nil {
+		return err
+	}
 	createIndexReq := esapi.IndicesCreateRequest{
 		Index: newIndexName,
-		Body: strings.NewReader(fmt.Sprintf(`{
-			"mappings": {
-				"properties": %s
-			}
-		}`, marshalToJSONString(properties))),
+		Body:  &buf,
 	}
 	createIndexRes, err := createIndexReq.Do(context.Background(), es.client)
 	if err != nil {
@@ -284,6 +266,7 @@ func (es *ElasticsearchClient) ChangeMappings(indexInfo models.IndexInfo, settin
 		return fmt.Errorf("error creating new index: %s", createIndexRes.String())
 	}
 
+	//TODO: explore if what would happen if we point read alias to two indices
 	// Step 5: Point write alias to new index
 	updateAliasReq := esapi.IndicesUpdateAliasesRequest{
 		Body: strings.NewReader(fmt.Sprintf(`{
@@ -344,16 +327,98 @@ func (es *ElasticsearchClient) ChangeMappings(indexInfo models.IndexInfo, settin
 	return nil
 }
 
-// Helper function to determine the data type of the field
-func determineDataType(field string) string {
-	// For simplicity, returning types based on the field name
-	if strings.Contains(field, "int") || strings.Contains(field, "number") {
-		return "integer"
+func createDynamicMapping(index string, existingMapping map[string]interface{}, settings models.IndexSettings) (map[string]interface{}, error) {
+	newMapping := make(map[string]interface{})
+
+	// Helper function to check if a field is in a list
+	contains := func(list []string, item string) bool {
+		for _, v := range list {
+			if v == item {
+				return true
+			}
+		}
+		return false
 	}
-	if strings.Contains(field, "date") {
-		return "date"
+
+	// Helper function to check if any child field is searchable or filterable
+	hasSearchableOrFilterableChild := func(prefix string, fields map[string]interface{}) bool {
+		for key := range fields {
+			fullPath := prefix + key
+			if contains(settings.SearchableAttributes, fullPath) || contains(settings.FacetAttributes, fullPath) {
+				return true
+			}
+		}
+		return false
 	}
-	return "keyword"
+
+	// Helper function to create field mapping
+	createFieldMapping := func(fieldName string, fieldType string) map[string]interface{} {
+		mapping := map[string]interface{}{}
+
+		isSearchable := contains(settings.SearchableAttributes, fieldName)
+		isFilterable := contains(settings.FacetAttributes, fieldName)
+
+		if isSearchable && isFilterable {
+			mapping["type"] = "text"
+			mapping["fields"] = map[string]interface{}{
+				"keyword": map[string]interface{}{
+					"type":         "keyword",
+					"ignore_above": 256,
+				},
+			}
+		} else if isSearchable {
+			mapping["type"] = "text"
+		} else if isFilterable {
+			mapping["type"] = "keyword"
+		} else {
+			//TODO: add support for range based queries ref: https://stackoverflow.com/questions/47542363/should-i-choose-datatype-of-keyword-or-long-integer-for-document-personid-in-e
+			// https://www.elastic.co/guide/en/elasticsearch/reference/current/tune-for-search-speed.html#map-ids-as-keyword
+			if fieldType == "text" {
+				mapping["type"] = fieldType
+				mapping["index"] = false
+			} else {
+				mapping["type"] = fieldType
+				mapping["index"] = false
+				mapping["doc_values"] = false
+			}
+		}
+
+		return mapping
+	}
+
+	// Recursive function to process nested fields
+	var processFields func(string, map[string]interface{}) map[string]interface{}
+	processFields = func(prefix string, fields map[string]interface{}) map[string]interface{} {
+		result := make(map[string]interface{})
+
+		for key, value := range fields {
+			fullPath := prefix + key
+			if subProperties, ok := value.(map[string]interface{})["properties"]; ok {
+				if hasSearchableOrFilterableChild(fullPath+".", subProperties.(map[string]interface{})) {
+					result[key] = map[string]interface{}{
+						"type":       "nested",
+						"properties": processFields(fullPath+".", subProperties.(map[string]interface{})),
+					}
+				} else {
+					result[key] = map[string]interface{}{
+						"properties": processFields(fullPath+".", subProperties.(map[string]interface{})),
+					}
+				}
+			} else {
+				fieldType := value.(map[string]interface{})["type"].(string)
+				result[key] = createFieldMapping(fullPath, fieldType)
+			}
+		}
+
+		return result
+	}
+
+	// Process the root level fields
+	rootFields := existingMapping[index].(map[string]interface{})["mappings"].(map[string]interface{})["properties"].(map[string]interface{})
+	properties := processFields("", rootFields)
+
+	newMapping["properties"] = properties
+	return newMapping, nil
 }
 
 // Helper function to marshal properties to JSON string

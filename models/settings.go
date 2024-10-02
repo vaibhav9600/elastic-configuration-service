@@ -7,7 +7,7 @@ type SearchableAttributes []string
 // support for dynamic facets is not present at the moment
 type FacetsAttributes []string
 
-type SetIndexSettings struct {
+type IndexSettings struct {
 	SearchableAttributes SearchableAttributes `json:"searchable_attributes"`
-	FacetsAttributes     FacetsAttributes     `json:"facets_attributes"`
+	FacetAttributes      FacetsAttributes     `json:"facet_attributes"`
 }
