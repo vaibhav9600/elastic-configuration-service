@@ -266,7 +266,7 @@ func (es *ElasticsearchClient) ChangeMappings(indexInfo models.IndexInfo, settin
 		return fmt.Errorf("error creating new index: %s", createIndexRes.String())
 	}
 
-	//TODO: explore if what would happen if we point read alias to two indices
+	// TODO: explore if what would happen if we point read alias to two indices
 	// Step 5: Point write alias to new index
 	updateAliasReq := esapi.IndicesUpdateAliasesRequest{
 		Body: strings.NewReader(fmt.Sprintf(`{
@@ -324,6 +324,7 @@ func (es *ElasticsearchClient) ChangeMappings(indexInfo models.IndexInfo, settin
 	// Step 8: Log the new mappings
 	fmt.Printf("New mappings for index %s: %v\n", newIndexName, properties)
 
+	// TODO: setup pipelines for cleaning up old indexes
 	return nil
 }
 
