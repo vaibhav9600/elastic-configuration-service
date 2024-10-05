@@ -19,6 +19,7 @@ type ElasticsearchClient struct {
 	client *elasticsearch.Client
 }
 
+// TODO: have proper versioning name support instead of just _new suffix
 func NewElasticsearchClient(url string) (*ElasticsearchClient, error) {
 	cfg := elasticsearch.Config{
 		Addresses: []string{url},
