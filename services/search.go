@@ -13,12 +13,12 @@ import (
 func (es *ElasticsearchClient) Search(payload models.SearchReq) (map[string]interface{}, error) {
 	ind := models.GetIndexInfo(models.IndexName{Index: payload.IndexName})
 	// form query here
-	query, queryBuf, err := BuildSearchQuery(payload)
+	query, queryBuf, err := es.BuildSearchQuery(payload)
 	if err != nil {
 		return nil, fmt.Errorf("some error occurred while building search query: %w", err)
 	}
 	fmt.Println(marshalToJSONString(query))
-	return nil, nil
+	// return nil, nil
 	req := esapi.SearchRequest{
 		Index: []string{ind.ReadAlias},
 		Body:  &queryBuf,
@@ -31,15 +31,20 @@ func (es *ElasticsearchClient) Search(payload models.SearchReq) (map[string]inte
 	if res.IsError() {
 		return nil, fmt.Errorf("error creating index: %s", res.String())
 	}
-	fmt.Println(res)
+	var searchResponse map[string]interface{}
+	if err := json.NewDecoder(res.Body).Decode(&searchResponse); err != nil {
+		return nil, err
+	}
 
-	return nil, nil
+	fmt.Println(searchResponse)
+
+	return searchResponse["hits"].(map[string]interface{}), nil
 }
 
-func BuildSearchQuery(reqPayload models.SearchReq) (map[string]interface{}, bytes.Buffer, error) {
+func (es *ElasticsearchClient) BuildSearchQuery(reqPayload models.SearchReq) (map[string]interface{}, bytes.Buffer, error) {
 	var buf bytes.Buffer
 	query := map[string]interface{}{
-		"query": getSearchQueryHelper(reqPayload),
+		"query": es.getSearchQueryHelper(reqPayload),
 		"from":  reqPayload.Cursor,
 		"size":  reqPayload.PageSize,
 		// "sort": getSortingData(reqPayload),
@@ -51,16 +56,20 @@ func BuildSearchQuery(reqPayload models.SearchReq) (map[string]interface{}, byte
 	return query, buf, nil
 }
 
-func getSearchQueryHelper(reqPayload models.SearchReq) map[string]interface{} {
+func (es *ElasticsearchClient) getSearchQueryHelper(reqPayload models.SearchReq) map[string]interface{} {
 	normalizeBoostValues(&reqPayload.SearchConfig)
 
 	boolQuery := make(map[string]interface{})
-	qb := models.NewQueryBuilder()
-	if should := generateElasticsearchSearch(qb, reqPayload); should != nil {
+	// qb := models.NewQueryBuilder()
+	qb, err := es.GetMappingBuilder(models.GetIndexInfo(models.IndexName{Index: reqPayload.IndexName}))
+	if err != nil {
+		return map[string]interface{}{}
+	}
+	if should := generateElasticsearchSearch(&qb, reqPayload); should != nil {
 		boolQuery["should"] = should
 		boolQuery["minimum_should_match"] = 1 // later we will play around with this
 	}
-	if filter, _ := generateElasticsearchFilter(qb, reqPayload.Filter); filter != nil {
+	if filter, _ := generateElasticsearchFilter(&qb, reqPayload.Filter); filter != nil {
 		boolQuery["filter"] = filter
 	}
 

@@ -40,21 +40,26 @@ type FieldMapping struct {
 	IsNested bool     // Indicates if the field is nested
 }
 
+type MappingInfo struct {
+	IndexName     string                  `json:"index_name"`
+	FieldMappings map[string]FieldMapping `json:"field_mappings"`
+}
+
 // QueryBuilder helps build Elasticsearch queries
 type QueryBuilder struct {
 	FieldMappings map[string]FieldMapping
 }
 
-// NewQueryBuilder creates a new QueryBuilder instance
-func NewQueryBuilder() *QueryBuilder {
-	return &QueryBuilder{
-		FieldMappings: map[string]FieldMapping{
-			"content.deeply_nested.first_name":   {Path: "content.deeply_nested", DataType: []string{"text", "keyword"}, IsNested: true},
-			"content.deeply_nested.last_name":    {Path: "content.deeply_nested", DataType: []string{"keyword"}, IsNested: true},
-			"content.deeply_nested.sample_float": {Path: "content.deeply_nested", DataType: []string{"float"}, IsNested: true},
-			"content.deeply_nested.structure":    {Path: "content.deeply_nested", DataType: []string{"integer"}, IsNested: true},
-			"content.deeply_nested.time_stamp":   {Path: "content.deeply_nested", DataType: []string{"date"}, IsNested: true},
-			"id":                                 {Path: "", DataType: []string{"text", "keyword"}, IsNested: false},
-		},
-	}
-}
+// // NewQueryBuilder creates a new QueryBuilder instance
+// func NewQueryBuilder() *QueryBuilder {
+// 	return &QueryBuilder{
+// 		FieldMappings: map[string]FieldMapping{
+// 			"content.deeply_nested.first_name":   {Path: "content.deeply_nested", DataType: []string{"text", "keyword"}, IsNested: true},
+// 			"content.deeply_nested.last_name":    {Path: "content.deeply_nested", DataType: []string{"keyword"}, IsNested: true},
+// 			"content.deeply_nested.sample_float": {Path: "content.deeply_nested", DataType: []string{"float"}, IsNested: true},
+// 			"content.deeply_nested.structure":    {Path: "content.deeply_nested", DataType: []string{"integer"}, IsNested: true},
+// 			"content.deeply_nested.time_stamp":   {Path: "content.deeply_nested", DataType: []string{"date"}, IsNested: true},
+// 			"id":                                 {Path: "", DataType: []string{"text", "keyword"}, IsNested: false},
+// 		},
+// 	}
+// }

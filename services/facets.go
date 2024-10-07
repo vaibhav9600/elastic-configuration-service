@@ -77,7 +77,7 @@ func generateFacetAggregations(facetReq models.FacetListingRequest, qb *models.Q
 }
 
 // TODO: Test nested within nested search , filtering and faceting
-func (es *ElasticsearchClient) FetchFacetData(facetReq models.FacetListingRequest, qb *models.QueryBuilder) (*models.DynamicFacetResponse, error) {
+func (es *ElasticsearchClient) FetchFacetData(ind models.IndexInfo, facetReq models.FacetListingRequest, qb *models.QueryBuilder) (*models.DynamicFacetResponse, error) {
 	// Construct Elasticsearch request payload
 	aggregations := generateFacetAggregations(facetReq, qb)
 	reqBody := map[string]interface{}{
@@ -91,7 +91,7 @@ func (es *ElasticsearchClient) FetchFacetData(facetReq models.FacetListingReques
 	}
 
 	req := esapi.SearchRequest{
-		Index: []string{"test_data_test"},
+		Index: []string{ind.ReadAlias},
 		Body:  &buf,
 	}
 	res, err := req.Do(context.Background(), es.client)
@@ -164,9 +164,9 @@ func (es *ElasticsearchClient) FetchFacetData(facetReq models.FacetListingReques
 	return dynamicResponse, nil
 }
 
-func (es *ElasticsearchClient) GetFacetListing(index string, reqPayload models.FacetListingRequest) (models.DynamicFacetResponse, error) {
-	queryBuilder := models.NewQueryBuilder()
-	facetResponse, err := es.FetchFacetData(reqPayload, queryBuilder)
+func (es *ElasticsearchClient) GetFacetListing(ind models.IndexInfo, reqPayload models.FacetListingRequest) (models.DynamicFacetResponse, error) {
+	queryBuilder, _ := es.GetMappingBuilder(ind)
+	facetResponse, err := es.FetchFacetData(ind, reqPayload, &queryBuilder)
 	if err != nil {
 		log.Fatalf("Error fetching facet data: %v", err)
 	}

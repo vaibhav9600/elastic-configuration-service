@@ -370,7 +370,7 @@ func createDynamicMapping(index string, existingMapping map[string]interface{}, 
 			}
 		} else if isSearchable {
 			mapping["type"] = "text"
-		} else if isFilterable {
+		} else if isFilterable { //TODO: see if we can use inherent data types, will be more suitable with range
 			mapping["type"] = "keyword"
 		} else {
 			//TODO: add support for range based queries ref: https://stackoverflow.com/questions/47542363/should-i-choose-datatype-of-keyword-or-long-integer-for-document-personid-in-e

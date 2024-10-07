@@ -22,13 +22,19 @@ func Search(esClient *services.ElasticsearchClient) http.HandlerFunc {
 		}
 		data.IndexName = indexName
 		// apply validation on index names here
-		_, err = esClient.Search(data)
+		res, err := esClient.Search(data)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		jsonResponse, err := json.Marshal(res)
+		if err != nil {
+			http.Error(w, "Error converting response to JSON: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 
-		w.WriteHeader(http.StatusFound)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Search Request Successful"})
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(jsonResponse)
 	}
 }

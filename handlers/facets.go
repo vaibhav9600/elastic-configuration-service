@@ -23,7 +23,7 @@ func GetFacets(esClient *services.ElasticsearchClient) http.HandlerFunc {
 
 		ind := models.GetIndexInfo(models.IndexName{Index: indexName})
 		// we will do write on write aliases
-		res, err := esClient.GetFacetListing(ind.ReadAlias, req)
+		res, err := esClient.GetFacetListing(ind, req)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

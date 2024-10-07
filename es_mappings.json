@@ -1,0 +1,151 @@
+{
+    "products": {
+        "index_name": "products",
+        "field_mappings": {
+            "brand": {
+                "Path": "",
+                "DataType": [
+                    "keyword"
+                ],
+                "IsNested": false
+            },
+            "name": {
+                "Path": "",
+                "DataType": [
+                    "text"
+                ],
+                "IsNested": false
+            },
+            "price": {
+                "Path": "",
+                "DataType": [
+                    "float"
+                ],
+                "IsNested": false
+            },
+            "reviews.comment": {
+                "Path": "reviews",
+                "DataType": [
+                    "text"
+                ],
+                "IsNested": true
+            },
+            "reviews.rating": {
+                "Path": "reviews",
+                "DataType": [
+                    "integer"
+                ],
+                "IsNested": true
+            },
+            "reviews.reviewer": {
+                "Path": "reviews",
+                "DataType": [
+                    "keyword"
+                ],
+                "IsNested": true
+            }
+        }
+    },
+    "test_data_3_ReadAlias": {
+        "index_name": "test_data_3_ReadAlias",
+        "field_mappings": {
+            "content.deeply_nested.first_name": {
+                "Path": "content.deeply_nested",
+                "DataType": [
+                    "text",
+                    "keyword",
+                    "keyword"
+                ],
+                "IsNested": true
+            },
+            "content.deeply_nested.last_name": {
+                "Path": "content.deeply_nested",
+                "DataType": [
+                    "keyword"
+                ],
+                "IsNested": true
+            },
+            "content.deeply_nested.sample_float": {
+                "Path": "content.deeply_nested",
+                "DataType": [
+                    "keyword"
+                ],
+                "IsNested": true
+            },
+            "content.deeply_nested.structure": {
+                "Path": "content.deeply_nested",
+                "DataType": [
+                    "long"
+                ],
+                "IsNested": true
+            },
+            "content.deeply_nested.time_stamp": {
+                "Path": "content.deeply_nested",
+                "DataType": [
+                    "keyword"
+                ],
+                "IsNested": true
+            },
+            "id": {
+                "Path": "",
+                "DataType": [
+                    "text",
+                    "keyword",
+                    "keyword"
+                ],
+                "IsNested": false
+            }
+        }
+    },
+    "test_data_test": {
+        "index_name": "test_data_test",
+        "field_mappings": {
+            "content.deeply_nested.first_name": {
+                "Path": "content.deeply_nested",
+                "DataType": [
+                    "text",
+                    "keyword",
+                    "keyword"
+                ],
+                "IsNested": true
+            },
+            "content.deeply_nested.last_name": {
+                "Path": "content.deeply_nested",
+                "DataType": [
+                    "keyword"
+                ],
+                "IsNested": true
+            },
+            "content.deeply_nested.sample_float": {
+                "Path": "content.deeply_nested",
+                "DataType": [
+                    "float"
+                ],
+                "IsNested": true
+            },
+            "content.deeply_nested.structure": {
+                "Path": "content.deeply_nested",
+                "DataType": [
+                    "integer"
+                ],
+                "IsNested": true
+            },
+            "content.deeply_nested.time_stamp": {
+                "Path": "content.deeply_nested",
+                "DataType": [
+                    "date"
+                ],
+                "IsNested": true
+            },
+            "id": {
+                "Path": "",
+                "DataType": [
+                    "text",
+                    "keyword",
+                    "keyword"
+                ],
+                "IsNested": false
+            }
+        }
+    }
+}
